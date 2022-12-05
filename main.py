@@ -6,6 +6,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils import executor
+from lib.config_file_actions import set_apikey
 import requests
 
 with open('database/config.pickle', 'rb') as f:
@@ -22,6 +23,7 @@ dp = Dispatcher(bot, storage=storage)
 class Form(StatesGroup):
     user_SummonerName = State()
     user_Server = State()
+    user_apikey= State()
 
 
 @dp.message_handler(commands='start')
@@ -29,8 +31,6 @@ async def cmd_start(message: types.Message):
     """
     Conversation's entry point
     """
-    # Set state
-    await Form.user_SummonerName.set()
     try:
         with open('database/users_info.pickle', 'rb') as f:
             users_info = pickle.load(f)
@@ -38,7 +38,7 @@ async def cmd_start(message: types.Message):
         users_info = {}
     if message.from_user.id not in users_info.keys():  # Проверяем есть ли ИД в БД
         await message.reply("Привет, отправь мне свой ник в League of Legends")
-
+        await Form.user_SummonerName.set()
         @dp.message_handler(state='*', commands='cancel')
         @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
         async def cancel_handler(message: types.Message, state: FSMContext):
@@ -62,11 +62,9 @@ async def cmd_start(message: types.Message):
             markup.add("RU", "EU", "NA")
             await message.reply("What is your server", reply_markup=markup)
 
-        # Check age. Age gotta be digit
         @dp.message_handler(state=Form.user_Server)
         async def process_age(message: types.Message, state: FSMContext):
             # Update state and data
-            await Form.next()
             await state.update_data(user_Server=message.text)
             markup = types.ReplyKeyboardRemove()
 
@@ -93,6 +91,11 @@ async def cmd_start(message: types.Message):
                                f'Добро пожаловать призыватель, Мы Вас помним!\nВаше Имя призывателя: {users_info[message.from_user.id]["name"]}\nСервер: {users_info[message.from_user.id]["Server"]}\nУровень призывателя: {users_info[message.from_user.id]["summonerLevel"]}\nВаш ID призывателя: {users_info[message.from_user.id]["id"]}'
                                f'<a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{users_info[message.from_user.id]["profileIconId"]}.png">&#8205</a>',
                                parse_mode='HTML',disable_web_page_preview=False)
+
+
+
+
+
 
         # while True:
         #     sleep(900)
