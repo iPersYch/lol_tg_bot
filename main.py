@@ -6,7 +6,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils import executor
-from lib.config_file_actions import set_apikey
+from lib.config_file_actions import set_apikey, refresh_apikey
 import requests
 
 with open('database/config.pickle', 'rb') as f:
@@ -23,7 +23,7 @@ dp = Dispatcher(bot, storage=storage)
 class Form(StatesGroup):
     user_SummonerName = State()
     user_Server = State()
-    user_apikey= State()
+    user_apikey = State()
 
 
 @dp.message_handler(commands='start')
@@ -39,6 +39,7 @@ async def cmd_start(message: types.Message):
     if message.from_user.id not in users_info.keys():  # Проверяем есть ли ИД в БД
         await message.reply("Привет, отправь мне свой ник в League of Legends")
         await Form.user_SummonerName.set()
+
         @dp.message_handler(state='*', commands='cancel')
         @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
         async def cancel_handler(message: types.Message, state: FSMContext):
@@ -90,18 +91,39 @@ async def cmd_start(message: types.Message):
         await bot.send_message(message.chat.id,
                                f'Добро пожаловать призыватель, Мы Вас помним!\nВаше Имя призывателя: {users_info[message.from_user.id]["name"]}\nСервер: {users_info[message.from_user.id]["Server"]}\nУровень призывателя: {users_info[message.from_user.id]["summonerLevel"]}\nВаш ID призывателя: {users_info[message.from_user.id]["id"]}'
                                f'<a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{users_info[message.from_user.id]["profileIconId"]}.png">&#8205</a>',
-                               parse_mode='HTML',disable_web_page_preview=False)
+                               parse_mode='HTML', disable_web_page_preview=False)
 
 
+@dp.message_handler(commands='setapi')
+async def set_api_case(message: types.Message):
+    await message.reply(f'Отправь мне новый API')
+    await Form.user_apikey.set()
+
+    @dp.message_handler(state=Form.user_apikey, )
+    async def set_api(message: types.Message, state: FSMContext):
+        set_apikey(message.text)
+        await bot.send_message(message.chat.id,
+                               f'Ваш новый APIKEY: {message.text}\n сделайте /refreshapi , чтобы обновить')
+        await state.finish()
 
 
+@dp.message_handler(commands='printapi')
+async def print_api(message: types.Message):
+    await bot.send_message(message.chat.id, api_key)
 
 
-        # while True:
-        #     sleep(900)
-        #     response1 = requests.get(f"https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/pSUEMC0Samkn_nZIiO1BD9xIsLEcHFLTrsDBevLnfG6XaD4",params={"api_key":api_key})
-        #     if response1.status_code == 200:
-        #         await bot.send_message(message.chat.id, "ALARM!! СЕРЕЖА В ИГРЕ")
+@dp.message_handler(commands='refreshapi')
+async def refresh(message: types.Message):
+    global api_key
+    api_key = refresh_apikey()
+    await message.reply(f'Ваш APIKEY обновлен')
+
+
+    # while True:
+    #     sleep(900)
+    #     response1 = requests.get(f"https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/pSUEMC0Samkn_nZIiO1BD9xIsLEcHFLTrsDBevLnfG6XaD4",params={"api_key":api_key})
+    #     if response1.status_code == 200:
+    #         await bot.send_message(message.chat.id, "ALARM!! СЕРЕЖА В ИГРЕ")
 
     # with open('database/phrase_dict.pickle', 'rb') as f:
     #     phrase_dict = pickle.load(f)
