@@ -6,8 +6,6 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils import executor
-from pip._internal import commands
-
 from lib.config_file_actions import set_apikey, refresh_apikey
 import requests
 
@@ -31,9 +29,7 @@ class Form(StatesGroup):
 
 @dp.message_handler(commands='start')
 async def cmd_start(message: types.Message):
-    """
-    Conversation's entry point
-    """
+
     try:
         with open('database/users_info.pickle', 'rb') as f:
             users_info = pickle.load(f)
@@ -55,9 +51,7 @@ async def cmd_start(message: types.Message):
 
         @dp.message_handler(state=Form.user_SummonerName)
         async def process_name(message: types.Message, state: FSMContext):
-            """
-            Process user name
-            """
+
             async with state.proxy() as data:
                 data['user_SummonerName'] = message.text
 
@@ -149,7 +143,7 @@ async def start_watching(message: types.Message):
                     users_info[message.from_user.id]["is_watching"] = False
                     await bot.send_message(f'Чтобы получить еще одно уведомление напишите /startwatching')
                 else:
-                    sleep(600)
+                    sleep(120)
 
 
 
