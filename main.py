@@ -6,6 +6,8 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils import executor
+from pip._internal import commands
+
 from lib.config_file_actions import set_apikey, refresh_apikey
 import requests
 
@@ -24,6 +26,7 @@ class Form(StatesGroup):
     user_SummonerName = State()
     user_Server = State()
     user_apikey = State()
+    user_watching = State()
 
 
 @dp.message_handler(commands='start')
@@ -79,7 +82,8 @@ async def cmd_start(message: types.Message):
                                                     "summonerLevel": response.json()['summonerLevel'],
                                                     'Server': f'{data["user_Server"]}',
                                                     'puuid': response.json()['accountId'],
-                                                    "profileIconId": response.json()['profileIconId']}
+                                                    "profileIconId": response.json()['profileIconId'],
+                                                    'is_watching': None}
                 with open('database/users_info.pickle', 'wb') as f:
                     pickle.dump(users_info, f)
                 await bot.send_message(message.chat.id,
@@ -122,17 +126,31 @@ async def refresh(message: types.Message):
     api_key = refresh_apikey()
     await message.reply(f'Ваш APIKEY обновлен')
 
+@dp.message_handler(commands='startwatching')
+async def start_watching(message: types.Message):
+    with open('database/users_info.pickle', 'rb') as f:
+        users_info = pickle.load(f)
+        users_info[message.from_user.id]["is_watching"]=True
+    with open('database/users_info.pickle', 'wb') as f:
+        pickle.dump(users_info, f)
 
-    # while True:
-    #     sleep(900)
-    #     response1 = requests.get(f"https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/pSUEMC0Samkn_nZIiO1BD9xIsLEcHFLTrsDBevLnfG6XaD4",params={"api_key":api_key})
-    #     if response1.status_code == 200:
-    #         await bot.send_message(message.chat.id, "ALARM!! СЕРЕЖА В ИГРЕ")
+    if message.chat.id not in users_info.keys():
+        await message.reply(f'Вас нет в нашей базе данных, пройдите регистрацию через /start')
+    else:
+        if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params=api_key).status_code == 200:
+            await bot.send_message(message.chat.id,
+                                   f'Игрок vex1k сейчас в сети,\n(сюда воткнуть инфу по матчу).')
+        else:
+            await bot.send_message(message.chat.id,
+                                   f'Игрок vex1k сейчас не сети, но не переживайте мы сообщим вам, как только он будет онлайн.')
+            while users_info[message.from_user.id]["is_watching"]==True:
+                if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params=api_key).status_code == 200:
+                    await bot.send_message(message.from_user.id,f'Сережа онлайн! Повторяю Сережа ОН-ЛА-ЙН\n(сюда добавить информацию по игре)')
+                    users_info[message.from_user.id]["is_watching"] = False
+                    await bot.send_message(f'Чтобы получить еще одно уведомление напишите /startwatching')
+                else:
+                    sleep(600)
 
-    # with open('database/phrase_dict.pickle', 'rb') as f:
-    #     phrase_dict = pickle.load(f)
-    # with open('database/phrase_dict.pickle', 'wb') as f:
-    #     pickle.dump(phrase_dict, f)
 
 
 if __name__ == '__main__':
