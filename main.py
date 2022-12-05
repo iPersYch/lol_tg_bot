@@ -86,7 +86,9 @@ async def cmd_start(message: types.Message):
 
                 await state.finish()
     else:
-        if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params=api_key).status_code == "200":
+        if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params={"api_key":api_key}).status_code == 200:
+            print(requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params={
+                "api_key": api_key}).status_code == 200)
             is_online= True
         else:
             is_online= False
@@ -95,6 +97,10 @@ async def cmd_start(message: types.Message):
                                f'<a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{users_info[message.from_user.id]["profileIconId"]}.png">&#8205</a>',
                                parse_mode='HTML', disable_web_page_preview=False)
 
+    print(requests.get(
+        f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}',
+        params=api_key).status_code)
+    print({users_info[message.from_user.id]["id"]})
 
 @dp.message_handler(commands='setapi')
 async def set_api_case(message: types.Message):
@@ -131,14 +137,16 @@ async def start_watching(message: types.Message):
     if message.chat.id not in users_info.keys():
         await message.reply(f'Вас нет в нашей базе данных, пройдите регистрацию через /start')
     else:
-        if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params=api_key).status_code == "200":
+        if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params={
+            "api_key": api_key}).status_code == 200:
             await bot.send_message(message.chat.id,
                                    f'Игрок vex1k сейчас в сети,\n(сюда воткнуть инфу по матчу).')
         else:
             await bot.send_message(message.chat.id,
                                    f'Игрок vex1k сейчас не сети, но не переживайте мы сообщим вам, как только он будет онлайн.')
             while users_info[message.from_user.id]["is_watching"]==True:
-                if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params=api_key).status_code == "200":
+                if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params={
+                    "api_key": api_key}).status_code == 200:
                     await bot.send_message(message.from_user.id,f'Сережа онлайн! Повторяю Сережа ОН-ЛА-ЙН\n(сюда добавить информацию по игре)')
                     users_info[message.from_user.id]["is_watching"] = False
                     await bot.send_message(f'Чтобы получить еще одно уведомление напишите /startwatching')
