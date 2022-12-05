@@ -88,8 +88,12 @@ async def cmd_start(message: types.Message):
 
                 await state.finish()
     else:
+        if requests.get(f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}', params=api_key).status_code == 200:
+            is_online= True
+        else:
+            is_online= False
         await bot.send_message(message.chat.id,
-                               f'Добро пожаловать призыватель, Мы Вас помним!\nВаше Имя призывателя: {users_info[message.from_user.id]["name"]}\nСервер: {users_info[message.from_user.id]["Server"]}\nУровень призывателя: {users_info[message.from_user.id]["summonerLevel"]}\nВаш ID призывателя: {users_info[message.from_user.id]["id"]}'
+                               f'Добро пожаловать призыватель, Мы Вас помним!\nВаше Имя призывателя: {users_info[message.from_user.id]["name"]}\nСейчас в игре: {"Да" if is_online else "Нет"}\nСервер: {users_info[message.from_user.id]["Server"]}\nУровень призывателя: {users_info[message.from_user.id]["summonerLevel"]}\nВаш ID призывателя: {users_info[message.from_user.id]["id"]}'
                                f'<a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{users_info[message.from_user.id]["profileIconId"]}.png">&#8205</a>',
                                parse_mode='HTML', disable_web_page_preview=False)
 
