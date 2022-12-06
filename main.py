@@ -96,12 +96,6 @@ async def cmd_start(message: types.Message):
                                f'Добро пожаловать призыватель, Мы Вас помним!\nВаше Имя призывателя: {users_info[message.from_user.id]["name"]}\nСейчас в игре: {"Да" if is_online else "Нет"}\nСервер: {users_info[message.from_user.id]["Server"]}\nУровень призывателя: {users_info[message.from_user.id]["summonerLevel"]}\nВаш ID призывателя: {users_info[message.from_user.id]["id"]}'
                                f'<a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{users_info[message.from_user.id]["profileIconId"]}.png">&#8205</a>',
                                parse_mode='HTML', disable_web_page_preview=False)
-
-    print(requests.get(
-        f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["id"]}',
-        params=api_key).status_code)
-    print({users_info[message.from_user.id]["id"]})
-
 @dp.message_handler(commands='setapi')
 async def set_api_case(message: types.Message):
     await message.reply(f'Отправь мне новый API')
@@ -149,7 +143,7 @@ async def start_watching(message: types.Message):
                     "api_key": api_key}).status_code == 200:
                     await bot.send_message(message.from_user.id,f'Сережа онлайн! Повторяю Сережа ОН-ЛА-ЙН\n(сюда добавить информацию по игре)')
                     users_info[message.from_user.id]["is_watching"] = False
-                    await bot.send_message(f'Чтобы получить еще одно уведомление напишите /startwatching')
+                    await bot.send_message(message.from_user.id,f'Чтобы получить еще одно уведомление напишите /startwatching')
                 else:
                     sleep(120)
 
