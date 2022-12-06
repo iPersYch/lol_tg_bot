@@ -1,5 +1,5 @@
+import asyncio
 import pickle
-from time import sleep
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
@@ -121,6 +121,7 @@ async def refresh(message: types.Message):
     await message.reply(f'Ваш APIKEY обновлен')
 
 @dp.message_handler(commands='startwatching')
+
 async def start_watching(message: types.Message):
     with open('database/users_info.pickle', 'rb') as f:
         users_info = pickle.load(f)
@@ -145,9 +146,7 @@ async def start_watching(message: types.Message):
                     users_info[message.from_user.id]["is_watching"] = False
                     await bot.send_message(message.from_user.id,f'Чтобы получить еще одно уведомление напишите /startwatching')
                 else:
-                    sleep(120)
-
-
+                    await asyncio.sleep(120)
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
