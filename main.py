@@ -9,6 +9,7 @@ from aiogram.utils import executor
 from lib.config_file_actions import set_apikey, get_apikey
 from lib.users_action import User
 import requests
+from lib.profile_actions import Profile
 
 with open('database/config.pickle', 'rb') as f:
     config_info = pickle.load(f)
@@ -154,10 +155,8 @@ async def start_watching(message: types.Message):
 
 @dp.message_handler(commands='profile')
 async def profile(message: types.Message):
-    with open('database/users_info.pickle', 'rb') as f:
-        users_info = pickle.load(f)
-        new_text = '\n\n'.join(str(x) for x in users_info[message.from_user.id].items())
-    await message.reply(new_text)
+    profile = Profile(message)
+    await profile.profile_reply(message)
 
 
 @dp.message_handler(commands='setwatcher')
