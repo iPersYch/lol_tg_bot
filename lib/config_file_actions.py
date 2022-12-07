@@ -9,7 +9,7 @@ def set_apikey(new_apikey):
         pickle.dump(config_info, f)
     return
 
-def refresh_apikey():
+def get_apikey():
     with open('database/config.pickle', 'rb') as f:
         config_info = pickle.load(f)
     return config_info['api_key']
