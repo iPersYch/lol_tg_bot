@@ -15,7 +15,7 @@ class User:
         self.summoner_level = None
         self.profileiconid = None
         self.approved = None
-        self.watching_for = "pSUEMC0Samkn_nZIiO1BD9xIsLEcHFLTrsDBevLnfG6XaD4"
+        self.watching_for = "OltZbV6ovRsgRu1T0wXxQWVtsDQC7oD72BoaSeLWEIkWQg"
         self.is_watching = None
 
     async def lolinfo(self):
