@@ -16,6 +16,7 @@ class User:
         self.profileiconid = None
         self.approved = None
         self.watching_for = "OltZbV6ovRsgRu1T0wXxQWVtsDQC7oD72BoaSeLWEIkWQg"
+        self.watching_for_summonername= 'попся'
         self.is_watching = None
 
     async def lolinfo(self):
@@ -43,12 +44,15 @@ class User:
                                       'summoner_level': self.summoner_level,
                                       'profileiconid': self.profileiconid,
                                       'watching_for': self.watching_for,
-                                      'is_watching': self.is_watching}
+                                      'is_watching': self.is_watching,
+                                      'watching_for_summonername': self.watching_for_summonername}
             with open('database/users_info.pickle', 'wb') as f:
                 pickle.dump(users_info, f)
             return f'Вы были успешно добавлены в нашу БД, чтобы посмотреть информацию о своем профиле введите /profile'
         else:
             return "Введите /start и попробуйте снова. Проверьте имя призывателя и сервер"
+
+
 
 
 if __name__ == "__main__":

@@ -27,8 +27,6 @@ class Form(StatesGroup):
     user_apikey = State()
 
 
-
-
 @dp.message_handler(commands='start')
 async def cmd_start(message: types.Message):
     try:
@@ -72,20 +70,21 @@ async def cmd_start(message: types.Message):
                 await new_user.lolinfo()
                 markup = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True)
                 markup.add("Да", "Нет")
-                await message.reply(f"Это вы?\n\n<b>Имя призывателя:</b> {new_user.summoner_name}\n<b>Уровень призывателя:</b> {new_user.summoner_level}\n<a href='http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{new_user.profileiconid}.png'>&#8205</a>",
-                               parse_mode='HTML', disable_web_page_preview=False, reply_markup=markup)
+                await message.reply(
+                    f"Это вы?\n\n<b>Имя призывателя:</b> {new_user.summoner_name}\n<b>Уровень призывателя:</b> {new_user.summoner_level}\n<a href='http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{new_user.profileiconid}.png'>&#8205</a>",
+                    parse_mode='HTML', disable_web_page_preview=False, reply_markup=markup)
 
         @dp.message_handler(state=Form.user_approved)
         async def process_approved(message: types.Message, state: FSMContext):
             async with state.proxy() as data:
                 new_user = User(data['user_SummonerName'], data['user_Server'], message.from_user.id)
             await new_user.lolinfo()
-            if message.text=="Да":
+            if message.text == "Да":
                 new_user.approved = True
-            if message.text=="Нет":
+            if message.text == "Нет":
                 new_user.approved = False
-            text_from_add=await new_user.add_user()
-            await bot.send_message(message.chat.id,text_from_add, reply_markup=types.ReplyKeyboardRemove())
+            text_from_add = await new_user.add_user()
+            await bot.send_message(message.chat.id, text_from_add, reply_markup=types.ReplyKeyboardRemove())
             await state.finish()
     else:
         await bot.send_message(message.chat.id,
@@ -135,31 +134,49 @@ async def start_watching(message: types.Message):
                 params={
                     "api_key": api_key}).status_code == 200:
             await bot.send_message(message.chat.id,
-                                   f'Игрок vex1k сейчас в сети,\n(сюда воткнуть инфу по матчу).')
+                                   f'Игрок {users_info[message.from_user.id]["watching_for_summonername"]} сейчас в сети,\n(сюда воткнуть инфу по матчу).')
         else:
             await bot.send_message(message.chat.id,
-                                   f'Игрок vex1k сейчас не сети, но не переживайте мы сообщим вам, как только он будет онлайн.')
+                                   f'Игрок {users_info[message.from_user.id]["watching_for_summonername"]} сейчас не сети, но не переживайте мы сообщим вам, как только он будет онлайн.')
             while users_info[message.from_user.id]["is_watching"] == True:
                 if requests.get(
                         f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["watching_for"]}',
                         params={
                             "api_key": api_key}).status_code == 200:
                     await bot.send_message(message.from_user.id,
-                                           f'Сережа онлайн! Повторяю Сережа ОН-ЛА-ЙН\n(сюда добавить информацию по игре)')
+                                           f'{users_info[message.from_user.id]["watching_for_summonername"]} онлайн! Повторяю {users_info[message.from_user.id]["watching_for_summonername"]} ОН-ЛА-ЙН\n(сюда добавить информацию по игре)')
                     users_info[message.from_user.id]["is_watching"] = False
                     await bot.send_message(message.from_user.id,
                                            f'Чтобы получить еще одно уведомление напишите /startwatching')
                 else:
                     await asyncio.sleep(120)
 
+
 @dp.message_handler(commands='profile')
 async def profile(message: types.Message):
     with open('database/users_info.pickle', 'rb') as f:
         users_info = pickle.load(f)
-    await message.reply(f'{users_info}')
+        new_text = '\n\n'.join(str(x) for x in users_info[message.from_user.id].items())
+    await message.reply(new_text)
 
 
+@dp.message_handler(commands='setwatcher')
+async def setwatcher(message: types.Message):
+    try:
+        with open('database/users_info.pickle', 'rb') as f:
+            users_info = pickle.load(f)
+    except:
+        users_info = {}
+    users_info[message.from_user.id]["watching_for_summonername"] = message.text.split(' ')[1]
+    new_watcher_ID = requests.get(
+        f"https://{users_info[message.from_user.id]['summoner_server']}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{message.text.split(' ')[1]}",
+        params={"api_key": get_apikey()}).json()["id"]
+    users_info[message.from_user.id]["watching_for"] = new_watcher_ID
+    with open('database/users_info.pickle', 'wb') as f:
+        pickle.dump(users_info, f)
+    await message.reply(f'Теперь вы следите за игроком {users_info[message.from_user.id]["watching_for_summonername"]}')
 
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
+
