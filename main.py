@@ -48,6 +48,7 @@ def get_cancel_kb():
 
 @dp.message_handler(commands='start')
 async def cmd_start(message: types.Message):
+    await message.delete()
     await message.answer(f'Чтобы создать профиль отправьте /create', reply_markup=get_kb())
     await db_create_user(message.from_user.id)
 
@@ -57,31 +58,35 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
     if state is None:
         return
     await state.finish()
-    await message.reply('Вы прервали создание профиля, чтобы начать заново введите /create', reply_markup=get_kb())
+    await message.delete()
+    await message.answer('Вы прервали создание профиля, чтобы начать заново введите /create', reply_markup=get_kb())
 
 
 @dp.message_handler(commands=['create'])
 async def cmd_create(message: types.Message):
+    await message.delete()
     if await db_users_exist(message.from_user.id):
         await db_create_user(message.from_user.id)
-        await message.reply(f'Отправь мне твое имя призывателя!', reply_markup=get_cancel_kb())
+        await message.answer(f'Отправь мне твое имя призывателя!', reply_markup=get_cancel_kb())
         await ProfileStatesGroup.user_SummonerName.set()
     else:
-        await message.reply(f'Мы помним Вас, введите /profile', reply_markup=types.ReplyKeyboardRemove())
+        await message.answer(f'Мы помним Вас, введите /profile', reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(content_types=['text'], state=ProfileStatesGroup.user_SummonerName)
 async def input_summonername(message: types.Message, state: FSMContext):
+    await message.delete()
     async with state.proxy() as data:
         data['summoner_name'] = message.text
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("RU", "EU", "NA", "/cancel")
-    await message.reply('Теперь выбери сервер на котором играешь!', reply_markup=markup)
+    await message.answer('Теперь выбери сервер на котором играешь!', reply_markup=markup)
     await ProfileStatesGroup.next()
 
 
 @dp.message_handler(content_types=['text'], state=ProfileStatesGroup.user_Server)
 async def input_summonername(message: types.Message, state: FSMContext):
+    await message.delete()
     async with state.proxy() as data:
         data['user_server'] = message.text
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -89,7 +94,7 @@ async def input_summonername(message: types.Message, state: FSMContext):
     user_lol_info = requests.get(
         f"https://{str(data['user_server']).lower()}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{data['summoner_name']}",
         params={"api_key": get_apikey()}).json()
-    await message.reply(
+    await message.answer(
         f'<b>Это вы?</b>\n<b>Имя призывателя:</b> {user_lol_info["name"]}\n<b>Уровень:</b> {user_lol_info["summonerLevel"]} <a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{user_lol_info["profileIconId"]}.png">&#8205</a>',
         parse_mode='HTML', disable_web_page_preview=False, reply_markup=markup)
     await ProfileStatesGroup.next()
@@ -97,19 +102,21 @@ async def input_summonername(message: types.Message, state: FSMContext):
 
 @dp.message_handler(content_types=['text'], state=ProfileStatesGroup.user_approve)
 async def input_summonername(message: types.Message, state: FSMContext):
+    await message.delete()
     if message.text == 'Да':
-        await message.reply(f'Спасибо, профиль успешно создан', reply_markup=types.ReplyKeyboardRemove())
+        await message.answer(f'Спасибо, профиль успешно создан', reply_markup=types.ReplyKeyboardRemove())
         await db_user_edit(state, message.from_user.id)
         await state.finish()
     if message.text == 'Нет':
-        await message.reply(f'Отправьте /create и попробуйте снова. Еще раз проверьте имя призывателя и сервер',
+        await message.answer(f'Отправьте /create и попробуйте снова. Еще раз проверьте имя призывателя и сервер',
                             reply_markup=get_kb())
         await state.finish()
 
 
 @dp.message_handler(commands='setapi')
 async def set_api_case(message: types.Message):
-    await message.reply(f'Отправь мне новый API', reply_markup=get_cancel_kb())
+    await message.delete()
+    await message.answer(f'Отправь мне новый API', reply_markup=get_cancel_kb())
     await ApiStatesGroup.input_api.set()
 
     @dp.message_handler(state=ApiStatesGroup.input_api)

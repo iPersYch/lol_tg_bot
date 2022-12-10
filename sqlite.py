@@ -55,9 +55,6 @@ async def db_users_exist(tg_ID):
     else:
         return False
 
-if __name__ == '__main__':
-    db_start()
-    print(db_users_exist('5766429577'))
 
 
 
