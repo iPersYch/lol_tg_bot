@@ -1,4 +1,6 @@
+import asyncio
 import pickle
+from datetime import datetime
 
 import requests
 from aiogram import Bot, Dispatcher, types
@@ -6,9 +8,10 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils import executor
+from pip._internal import commands
 
 from lib.config_file_actions import set_apikey, get_apikey
-from sqlite import db_start, db_create_user, db_user_edit, db_users_exist
+from sqlite import db_start, db_create_user, db_user_edit, db_user_exist, db_user_get_info, db_user_edit_info
 
 with open('database/config.pickle', 'rb') as f:
     config_info = pickle.load(f)
@@ -32,7 +35,8 @@ class ProfileStatesGroup(StatesGroup):
 
 class ApiStatesGroup(StatesGroup):
     input_api = State()
-
+class WatcherStatesGroup(StatesGroup):
+    input_watcher = State()
 
 def get_kb():
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -65,7 +69,7 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['create'])
 async def cmd_create(message: types.Message):
     await message.delete()
-    if await db_users_exist(message.from_user.id):
+    if await db_user_exist(message.from_user.id):
         await db_create_user(message.from_user.id)
         await message.answer(f'Отправь мне твое имя призывателя!', reply_markup=get_cancel_kb())
         await ProfileStatesGroup.user_SummonerName.set()
@@ -109,7 +113,7 @@ async def input_summonername(message: types.Message, state: FSMContext):
         await state.finish()
     if message.text == 'Нет':
         await message.answer(f'Отправьте /create и попробуйте снова. Еще раз проверьте имя призывателя и сервер',
-                            reply_markup=get_kb())
+                             reply_markup=get_kb())
         await state.finish()
 
 
@@ -134,72 +138,66 @@ async def print_api(message: types.Message):
 
 
 @dp.message_handler(commands='refreshapi')
-async def refresh(message: types.Message):
+async def refresh_api(message: types.Message):
     global api_key
     api_key = get_apikey()
     await message.reply(f'Ваш APIKEY обновлен')
 
 
-#
-#
-# @dp.message_handler(commands='startwatching')
-# async def start_watching(message: types.Message):
-#     with open('database/users_info.pickle', 'rb') as f:
-#         users_info = pickle.load(f)
-#         users_info[message.from_user.id]["is_watching"] = True
-#     with open('database/users_info.pickle', 'wb') as f:
-#         pickle.dump(users_info, f)
-#
-#     if message.chat.id not in users_info.keys():
-#         await message.reply(f'Вас нет в нашей базе данных, пройдите регистрацию через /start')
-#     else:
-#         if requests.get(
-#                 f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["watching_for"]}',
-#                 params={
-#                     "api_key": api_key}).status_code == 200:
-#             await bot.send_message(message.chat.id,
-#                                    f'Игрок {users_info[message.from_user.id]["watching_for_summonername"]} сейчас в сети,\n(сюда воткнуть инфу по матчу).')
-#         else:
-#             await bot.send_message(message.chat.id,
-#                                    f'Игрок {users_info[message.from_user.id]["watching_for_summonername"]} сейчас не сети, но не переживайте мы сообщим вам, как только он будет онлайн.')
-#             while users_info[message.from_user.id]["is_watching"] == True:
-#                 if requests.get(
-#                         f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{users_info[message.from_user.id]["watching_for"]}',
-#                         params={
-#                             "api_key": api_key}).status_code == 200:
-#                     await bot.send_message(message.from_user.id,
-#                                            f'{users_info[message.from_user.id]["watching_for_summonername"]} онлайн! Повторяю {users_info[message.from_user.id]["watching_for_summonername"]} ОН-ЛА-ЙН\n(сюда добавить информацию по игре)')
-#                     users_info[message.from_user.id]["is_watching"] = False
-#                     with open('database/users_info.pickle', 'wb') as f:
-#                         pickle.dump(users_info, f)
-#
-#                     await bot.send_message(message.from_user.id,
-#                                            f'Чтобы получить еще одно уведомление напишите /startwatching')
-#                 else:
-#                     await asyncio.sleep(120)
-#
-#
-# @dp.message_handler(commands='profile')
-# async def profile(message: types.Message):
-#     profile = Profile(message)
-#     await profile.profile_reply(message)
-#
-#
-# @dp.message_handler(commands='setwatcher')
-# async def setwatcher(message: types.Message):
-#     try:
-#         with open('database/users_info.pickle', 'rb') as f:
-#             users_info = pickle.load(f)
-#     except:
-#         users_info = {}
-#     users_info[message.from_user.id]["watching_for_summonername"] = message.text.split(' ')[1]
-#     new_watcher_ID = requests.get(
-#         f"https://{users_info[message.from_user.id]['summoner_server']}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{message.text.split(' ')[1]}",
-#         params={"api_key": get_apikey()}).json()["id"]
-#     users_info[message.from_user.id]["watching_for"] = new_watcher_ID
-#     with open('database/users_info.pickle', 'wb') as f:
-#         pickle.dump(users_info, f)
-#     await message.reply(f'Теперь вы следите за игроком {users_info[message.from_user.id]["watching_for_summonername"]}')
+@dp.message_handler(commands='profile')
+async def show_profile(message: types.Message):
+    await message.delete()
+    await message.answer(f'Приветствую тебя, <b>{message.from_user.username}</b>!!\n'
+                         f'Имя призывателя: <b>{await db_user_get_info(message.from_user.id, "summoner_name")}</b>\n'
+                         f'Сервер: <b>{await db_user_get_info(message.from_user.id, "summoner_server")}</b>\n'
+                         f'Уровень: <b>{await db_user_get_info(message.from_user.id, "summoner_level")}</b>\n'
+                         f'Наблюдаете за: <b>{await db_user_get_info(message.from_user.id, "watching_for_summonername")}</b>\n'
+                         f'Состояние уведомлений: <b>{"Включены" if await db_user_get_info(message.from_user.id, "is_watching")=="1" else "Отключены"}</b>\n'
+                         f'<a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{await db_user_get_info(message.from_user.id, "profileiconid")}.png">&#8205</a>',
+                         parse_mode='HTML', disable_web_page_preview=False
+                         )
+
+
+@dp.message_handler(commands='watch')
+async def start_watching(message: types.Message):
+    if await db_user_exist(message.from_user.id):
+        await message.answer(f'Перед тем как начать получать уведомления, пройдите регистрацию /create ')
+    else:
+        if await db_user_get_info(message.from_user.id,'is_watching')=='1':
+            await message.answer(f'Уведомления уже подключены. Проявите терпения, <b>{await db_user_get_info(message.from_user.id,"watching_for_summonername")}</b> еще не был онлайн', parse_mode="HTML")
+        else:
+            await db_user_edit_info(message.from_user.id, 'is_watching', True)
+            await message.answer(f'Уведомления включены. Вы получите уведомление, когда пользователь <b>{await db_user_get_info(message.from_user.id,"watching_for_summonername")}</b> будет в сети', parse_mode='HTML')
+        print(requests.get(
+            f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{await db_user_get_info(message.from_user.id, "watching_for")}',
+            params={
+                "api_key": api_key}).status_code)
+        while await db_user_get_info(message.from_user.id,'is_watching')=='1':
+            if requests.get(
+                            f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{await db_user_get_info(message.from_user.id,"watching_for")}',
+                            params={
+                                "api_key": api_key}).status_code == 200:
+                await message.reply(f'Пользователь с ником <b>{await db_user_get_info(message.from_user.id,"watching_for_summonername")}</b> ОН-ЛА-ЙН!\nВремя: <b>{datetime.now().strftime("%D-%H:%M")}</b>\n'
+                                    f'Уведомления отключены до следующей команды /watch', parse_mode='HTML')
+                await db_user_edit_info(message.from_user.id, 'is_watching', False)
+            else:
+                await asyncio.sleep(120)
+
+@dp.message_handler(commands='stopwatch')
+async def stop_watching(message: types.Message):
+    await db_user_edit_info(message.from_user.id, 'is_watching', False)
+    await message.reply(f'Уведомления отключены. Отправьте /watch ,  чтобы начать снова получать уведомления')
+
+@dp.message_handler(commands='set')
+async def set_watcher(message: types.Message):
+    await message.reply(f'Пришлите мне имя призывателя, за которым хотите следить', reply_markup=get_cancel_kb())
+    await WatcherStatesGroup.input_watcher.set()
+    @dp.message_handler(state=WatcherStatesGroup.input_watcher)
+    async def input_watcher(message: types.Message, state: FSMContext):
+        await db_user_edit_info(message.from_user.id,"watching_for_summonername",message.text)
+        await message.reply(f'Теперь вы следите за пользователем {message.text}\nОтправьте /profile, чтобы убедиться', reply_markup=types.ReplyKeyboardRemove())
+        await state.finish()
+
 
 
 if __name__ == '__main__':
