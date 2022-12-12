@@ -152,7 +152,7 @@ async def show_profile(message: types.Message):
                          f'Сервер: <b>{await db_user_get_info(message.from_user.id, "summoner_server")}</b>\n'
                          f'Уровень: <b>{await db_user_get_info(message.from_user.id, "summoner_level")}</b>\n'
                          f'Наблюдаете за: <b>{await db_user_get_info(message.from_user.id, "watching_for_summonername")}</b>\n'
-                         f'Состояние уведомлений: <b>{"Включены" if await db_user_get_info(message.from_user.id, "is_watching")=="1" else "Отключены"}</b>\n'
+                         f'Состояние уведомлений: <b>{"Включены" if await db_user_get_info(message.from_user.id, "is_watching")=="True" else "Отключены"}</b>\n'
                          f'<a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{await db_user_get_info(message.from_user.id, "profileiconid")}.png">&#8205</a>',
                          parse_mode='HTML', disable_web_page_preview=False
                          )
@@ -172,7 +172,7 @@ async def start_watching(message: types.Message):
             f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{await db_user_get_info(message.from_user.id, "watching_for")}',
             params={
                 "api_key": api_key}).status_code)
-        while await db_user_get_info(message.from_user.id,'is_watching')=='1':
+        while await db_user_get_info(message.from_user.id,'is_watching')=='True':
             if requests.get(
                             f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{await db_user_get_info(message.from_user.id,"watching_for")}',
                             params={
