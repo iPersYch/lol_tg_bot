@@ -82,7 +82,9 @@ async def db_user_edit_info(tg_ID, column_name, new_info):
     print(f'Данные пользователя {tg_ID} успешно изменены\n {"#"*20}')
     db.commit()
 
-
+async def db_get_all_info():
+    all_info = cur.execute(f'SELECT * FROM users_info').fetchall()
+    return all_info
 
 
 

@@ -11,7 +11,7 @@ from aiogram.utils import executor
 from pip._internal import commands
 
 from lib.config_file_actions import set_apikey, get_apikey
-from sqlite import db_start, db_create_user, db_user_edit, db_user_exist, db_user_get_info, db_user_edit_info
+from sqlite import db_start, db_create_user, db_user_edit, db_user_exist, db_user_get_info, db_user_edit_info,db_get_all_info
 
 with open('database/config.pickle', 'rb') as f:
     config_info = pickle.load(f)
@@ -90,18 +90,23 @@ async def input_summonername(message: types.Message, state: FSMContext):
 
 @dp.message_handler(content_types=['text'], state=ProfileStatesGroup.user_Server)
 async def input_summonername(message: types.Message, state: FSMContext):
-    await message.delete()
+
     async with state.proxy() as data:
         data['user_server'] = message.text
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("Да", "Нет", "/cancel")
-    user_lol_info = requests.get(
-        f"https://{str(data['user_server']).lower()}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{data['summoner_name']}",
-        params={"api_key": get_apikey()}).json()
-    await message.answer(
-        f'<b>Это вы?</b>\n<b>Имя призывателя:</b> {user_lol_info["name"]}\n<b>Уровень:</b> {user_lol_info["summonerLevel"]} <a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{user_lol_info["profileIconId"]}.png">&#8205</a>',
-        parse_mode='HTML', disable_web_page_preview=False, reply_markup=markup)
-    await ProfileStatesGroup.next()
+    try:
+        user_lol_info = requests.get(
+            f"https://{str(data['user_server']).lower()}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{data['summoner_name']}",
+            params={"api_key": get_apikey()}).json()
+        await message.answer(
+            f'<b>Это вы?</b>\n<b>Имя призывателя:</b> {user_lol_info["name"]}\n<b>Уровень:</b> {user_lol_info["summonerLevel"]} <a href="http://ddragon.leagueoflegends.com/cdn/12.22.1/img/profileicon/{user_lol_info["profileIconId"]}.png">&#8205</a>',
+            parse_mode='HTML', disable_web_page_preview=False, reply_markup=markup)
+        await message.delete()
+        await ProfileStatesGroup.next()
+    except:
+        await message.reply(f'Oooops!! Что-то пошло не так, снова отправьте /create \nПеред этим проверьте правильность выбора сервера и имя призывателя', reply_markup=get_kb())
+        await state.finish()
 
 
 @dp.message_handler(content_types=['text'], state=ProfileStatesGroup.user_approve)
@@ -147,7 +152,7 @@ async def refresh_api(message: types.Message):
 @dp.message_handler(commands='profile')
 async def show_profile(message: types.Message):
     await message.delete()
-    await message.answer(f'Приветствую тебя, <b>{message.from_user.username}</b>!!\n'
+    await message.answer(f'Приветствую тебя, <b>@{message.from_user.username}</b> !!\n'
                          f'Имя призывателя: <b>{await db_user_get_info(message.from_user.id, "summoner_name")}</b>\n'
                          f'Сервер: <b>{await db_user_get_info(message.from_user.id, "summoner_server")}</b>\n'
                          f'Уровень: <b>{await db_user_get_info(message.from_user.id, "summoner_level")}</b>\n'
@@ -197,6 +202,10 @@ async def set_watcher(message: types.Message):
         await db_user_edit_info(message.from_user.id,"watching_for_summonername",message.text)
         await message.reply(f'Теперь вы следите за пользователем {message.text}\nОтправьте /profile, чтобы убедиться', reply_markup=types.ReplyKeyboardRemove())
         await state.finish()
+
+@dp.message_handler(commands='getdb')
+async def get_db(message: types.Message):
+    await message.reply(await db_get_all_info())
 
 
 
