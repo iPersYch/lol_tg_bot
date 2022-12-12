@@ -184,10 +184,12 @@ async def start_watching(message: types.Message):
                                 "api_key": api_key}).status_code == 200:
                 user=UserMatch(message.from_user.id)
                 await user.get_info()
+                await user.get_champ()
                 await message.reply(f'Пользователь с ником <b>{await db_user_get_info(message.from_user.id,"watching_for_summonername")}</b> ОН-ЛА-ЙН!\nВремя: <b>{datetime.now().strftime("%D-%H:%M")}</b>\n'
                                     f'Режим игры: <b>{"Ущелье призывателей 5х5" if user.game_mode=="CLASSIC" else user.game_mode }\n</b>'
                                     f'Игра началась : <b>{user.gameStartTime}\n</b>'
-                                    f'Игра уже идет: </b>{user.gameLength}\n</b>'
+                                    f'Игра уже идет: <b>{user.gameLength}\n</b>'
+                                    f'Играет за: <b>{user.champion}\n</b>'
                                     f'Уведомления отключены до следующей команды /watch', parse_mode='HTML')
                 await db_user_edit_info(message.from_user.id, 'is_watching', False)
             else:
