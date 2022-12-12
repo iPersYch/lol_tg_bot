@@ -8,7 +8,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils import executor
-from pip._internal import commands
+from lib.match_info_actions import UserMatch
 
 from lib.config_file_actions import set_apikey, get_apikey
 from sqlite import db_start, db_create_user, db_user_edit, db_user_exist, db_user_get_info, db_user_edit_info,db_get_all_info
@@ -182,7 +182,12 @@ async def start_watching(message: types.Message):
                             f'https://ru.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{await db_user_get_info(message.from_user.id,"watching_for")}',
                             params={
                                 "api_key": api_key}).status_code == 200:
+                user=UserMatch(message.from_user.id)
+                await user.get_info()
                 await message.reply(f'Пользователь с ником <b>{await db_user_get_info(message.from_user.id,"watching_for_summonername")}</b> ОН-ЛА-ЙН!\nВремя: <b>{datetime.now().strftime("%D-%H:%M")}</b>\n'
+                                    f'Режим игры: <b>{"Ущелье призывателей 5х5" if user.game_mode=="CLASSIC" else user.game_mode }\n</b>'
+                                    f'Игра началась : <b>{user.gameStartTime}\n</b>'
+                                    f'Игра уже идет: </b>{user.gameLength}\n</b>'
                                     f'Уведомления отключены до следующей команды /watch', parse_mode='HTML')
                 await db_user_edit_info(message.from_user.id, 'is_watching', False)
             else:
